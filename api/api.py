@@ -9,13 +9,14 @@ class Item(BaseModel):
     v: float
     ### ...
 
-@app.get("/items/{init_date}-{final_date}", response_model=List[Item])
+@app.get("/yvyryryi/download/{init_date}-{final_date}", response_model=...)
 async def download(init_date: str, final_date: str):
+    ### make the query towards the apache druid endpoint
     ### create fits files
     ### compress fits files
     ### send
 
-@app.get("/items/{init_date}-{final_date}", response_model=List[Item])
+@app.get("/yvyryryi/visualize/{init_date}-{final_date}", response_model=List[Item])
 async def visualize(init_date: str, final_date: str):
     item = ...
     if item is None:
