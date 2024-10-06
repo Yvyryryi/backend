@@ -1,31 +1,37 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import List
+from datetime import datetime
 import requests
+from typing import Union
 
 app = FastAPI()
 
-@app.get("/yvyryryi/download/{init_date}-{final_date}", response_model=...)
-async def download(init_date: str, final_date: str):
-    ### make the query towards the apache druid endpoint
-    ### create fits files
-    ### compress fits files
-    ### send
+@app.get("/yvyryryi/visualize/{init_date}-{final_date}")
+async def visualize(init_date: Union[str, datetime], final_date: Union[str, datetime]):
+    try:
+        if isinstance(init_date, str):
+            init_date = datetime.strptime(init_date, '%Y/%m/%d-%H/%M')
+        if isinstance(final_date, str):
+            final_date = datetime.strptime(final_date, '%Y/%m/%d-%H/%M')
+        init_date_str = init_date.strftime("'%Y-%m-%d %H:%M:%S'")
+        final_date_str = final_date.strftime("'%Y-%m-%d %H:%M:%S'")
+        query = f"SELECT * FROM yvyryryi WHERE __time >= {init_date_str} AND __time < {final_date_str}"
+        response = requests.post(
+            'http://localhost:8888/druid/v2/sql',
+            headers={'Content-Type': 'application/json'},
+            json={
+                "query": query,
+                "context": {"sqlQueryId": "request01"},
+                "header": True,
+                "typesHeader": True,
+                "sqlTypesHeader": True,
+            }
+        )
+        response.raise_for_status()
+        return response.json()
 
-@app.get("/yvyryryi/visualize/{init_date}-{final_date}", response_model=List[Item])
-async def visualize(init_date: str, final_date: str):
-    item = requests.get(
-        'http://localhost:8888/druid/v2/sql',
-        headers = {'Content-Type' : 'application/json'},
-        data = {
-            "query": f"SELECT * FROM yvyryryi WHERE {init_date} < date < {final_date}",
-            "context" : {"sqlQueryId" : "request01"},
-            "header" : True,
-            "typesHeader" : True,
-            "sqlTypesHeader" : True,
-        }
-    )
-    ## {rel_time: ..., velocity: ...}
-    if item is None:
-        raise HTTPException(status_code=404, detail="Item not found")
-    return item
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Error querying Druid: {str(e)}")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid date format: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
