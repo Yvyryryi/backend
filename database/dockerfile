@@ -13,6 +13,6 @@ RUN mkdir -p ${DRUID_HOME} && \
 
 WORKDIR ${DRUID_HOME}
 
-EXPOSE 8081 8082 8083 8090 8091
+EXPOSE 8081 8082 8083 8090 8091 8888
 
 CMD ["bash", "-c", "bin/start-druid"]
